@@ -216,8 +216,10 @@ handler.setInputAction((click) => {
     if (picked.id && picked.id.properties) {
       const id = picked.id.properties.benchId && picked.id.properties.benchId.getValue();
       if (id) {
-        const bench = BenchAPI.getById(id);
-        if (bench) { showBenchPopup(bench); return; }
+        BenchAPI.getById(id).then(bench => {
+          if (bench) { showBenchPopup(bench); }
+        });
+        return;
       }
     }
   }
