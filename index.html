@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Les Bancs</title>
+
+  <!-- Cesium.js (globe 3D) via jsDelivr -->
+  <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.111.0/Build/Cesium/';</script>
+  <link  href="https://cdn.jsdelivr.net/npm/cesium@1.111.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.111.0/Build/Cesium/Cesium.js"></script>
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/map.css">
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="logo">
+      <span class="logo-icon">🪑</span>
+      <span class="logo-text">Les Bancs</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary btn-sm" id="btn-recenter">🌍 Globe</button>
+      <div id="header-auth-slot"></div>
+    </div>
+  </header>
+
+  <!-- ── Globe container ─────────────────────────────────────────────────── -->
+  <div id="map"></div>
+
+  <!-- ── Floating map controls ───────────────────────────────────────────── -->
+  <div class="map-controls">
+    <button class="map-ctrl-btn" id="btn-zoom-max" title="Zoom maximum">⬇</button>
+    <button class="map-ctrl-btn" id="btn-zoom-out" title="Dézoomer">−</button>
+    <button class="map-ctrl-btn" id="btn-zoom-in"  title="Zoomer">+</button>
+  </div>
+
+  <!-- ── Hint bar ────────────────────────────────────────────────────────── -->
+  <div id="map-hint">
+    <span>🔍 Zoomez et cliquez pour ajouter un banc</span>
+    <button class="hint-close" id="hint-close">✕</button>
+  </div>
+
+  <!-- ── Location confirmation modal ────────────────────────────────────── -->
+  <div class="modal-overlay" id="location-modal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📍 Ajouter un banc ici ?</h2>
+        <button class="btn-icon" id="location-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="coords-chip">🌐 <span id="modal-coords"></span></div>
+        <p style="color:var(--text-2);font-size:.875rem;line-height:1.6;">
+          Vous allez créer une fiche pour le banc situé à ces coordonnées.
+          Assurez-vous d'être au bon endroit !
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-location">Annuler</button>
+        <button class="btn btn-primary"   id="btn-confirm-location">Créer la fiche 🪑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Bench quick-view popup ──────────────────────────────────────────── -->
+  <div id="bench-popup" hidden>
+    <div class="popup-header">
+      <h3>🪑 Banc</h3>
+      <button class="btn-icon" id="popup-close">✕</button>
+    </div>
+    <div class="popup-score-row">
+      <span id="popup-score" class="popup-score-value"></span>
+      <span class="popup-score-max">/10</span>
+      <span id="popup-meta" style="margin-left:.5rem;flex:1;"></span>
+    </div>
+    <div id="popup-img"></div>
+    <div class="popup-body">
+      <p class="popup-comment-text" id="popup-comment"></p>
+      <p class="popup-author-line"  id="popup-author"></p>
+    </div>
+    <div class="popup-footer">
+      <button class="btn btn-primary" id="popup-view-btn">Voir la fiche →</button>
+    </div>
+  </div>
+
+  <!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/bench-api.js"></script>
+  <script src="js/auth.js"></script>
+  <link rel="stylesheet" href="css/auth.css">
+  <script>
+    // Hint différent selon l'état de connexion
+    window.addEventListener('DOMContentLoaded', () => {
+      updateHeaderAuth({ authPath: 'pages/auth.html', homeUrl: 'index.html' });
+      if (!AUTH.isLoggedIn()) {
+        document.querySelector('#map-hint span').textContent =
+          '👁 Connectez-vous pour ajouter un banc · consultez librement la carte';
+      }
+    });
+  </script>
+  <script src="js/map.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Config locale (si tu crées un config.local.js avec une vraie clé)
+config.local.js
+.env
+
+# Éditeurs
+.vscode/
+.idea/
+*.suo
+*.user

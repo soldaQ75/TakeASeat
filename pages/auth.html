@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Les Bancs</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body>
+
+  <header class="page-header">
+    <a class="back-link" href="../index.html">← Carte</a>
+    <h1>🪑 Les Bancs</h1>
+  </header>
+
+  <main class="auth-page">
+    <div class="auth-card">
+
+      <!-- ── Onglets ────────────────────────────────────────────────────── -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Connexion</button>
+        <button class="auth-tab"        data-tab="register">Inscription</button>
+      </div>
+
+      <!-- ── Panneau : Connexion ─────────────────────────────────────────── -->
+      <div class="auth-panel" id="panel-login">
+
+        <div class="alert alert-error" id="login-error" hidden></div>
+
+        <form id="login-form" novalidate>
+          <div class="form-field">
+            <label class="form-label" for="login-username">Pseudo</label>
+            <input class="form-input" type="text" id="login-username"
+              placeholder="VotrePseudo1234" autocomplete="username" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="login-password">Mot de passe</label>
+            <input class="form-input" type="password" id="login-password"
+              placeholder="••••••••" autocomplete="current-password" required>
+          </div>
+          <button class="btn btn-primary btn-lg" type="submit"
+            style="width:100%;justify-content:center;" id="btn-login">
+            Se connecter
+          </button>
+        </form>
+
+      </div>
+
+      <!-- ── Panneau : Inscription ───────────────────────────────────────── -->
+      <div class="auth-panel" id="panel-register" hidden>
+
+        <div class="alert alert-error" id="register-error" hidden></div>
+
+        <!-- Succès -->
+        <div id="register-success" hidden>
+          <div class="alert alert-success">✅ Compte créé ! Bienvenue <strong id="generated-username-display"></strong> !</div>
+          <a class="btn btn-primary btn-lg" id="success-redirect"
+            style="width:100%;justify-content:center;display:flex;margin-top:1rem;">
+            Continuer →
+          </a>
+        </div>
+
+        <form id="register-form" novalidate>
+          <div class="form-field">
+            <label class="form-label" for="register-username">Pseudo</label>
+            <input class="form-input" type="text" id="register-username"
+              placeholder="3–20 caractères, lettres et chiffres"
+              autocomplete="username" required minlength="3" maxlength="20">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="register-password">Mot de passe</label>
+            <input class="form-input" type="password" id="register-password"
+              placeholder="Minimum 6 caractères" autocomplete="new-password" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="register-confirm">Confirmer le mot de passe</label>
+            <input class="form-input" type="password" id="register-confirm"
+              placeholder="••••••••" autocomplete="new-password" required>
+          </div>
+          <button class="btn btn-primary btn-lg" type="submit"
+            style="width:100%;justify-content:center;" id="btn-register">
+            Créer mon compte
+          </button>
+        </form>
+
+      </div>
+
+
+    </div>
+  </main>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // Redirection si déjà connecté
+    if (AUTH.isLoggedIn()) {
+      window.location.href = getReturnUrl();
+      return;
+    }
+
+    function getReturnUrl() {
+      const p = new URLSearchParams(window.location.search).get('return');
+      return p && p.startsWith('http') ? p : '../index.html';
+    }
+
+    // ── Onglets ───────────────────────────────────────────────────────────
+
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.tab;
+        document.getElementById('panel-login').hidden    = target !== 'login';
+        document.getElementById('panel-register').hidden = target !== 'register';
+      });
+    });
+
+    // ── Connexion ─────────────────────────────────────────────────────────
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-login');
+      const err = document.getElementById('login-error');
+      err.hidden = true;
+      btn.disabled = true;
+      btn.textContent = 'Connexion…';
+
+      try {
+        await AUTH.login(
+          document.getElementById('login-username').value,
+          document.getElementById('login-password').value
+        );
+        window.location.href = getReturnUrl();
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+      }
+    });
+
+    // ── Inscription ───────────────────────────────────────────────────────
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn  = document.getElementById('btn-register');
+      const err  = document.getElementById('register-error');
+      const user_= document.getElementById('register-username').value.trim();
+      const pwd  = document.getElementById('register-password').value;
+      const conf = document.getElementById('register-confirm').value;
+      err.hidden = true;
+
+      if (!user_) {
+        err.textContent = 'Choisissez un pseudo.';
+        err.hidden = false; return;
+      }
+      if (pwd.length < 6) {
+        err.textContent = 'Le mot de passe doit faire au moins 6 caractères.';
+        err.hidden = false; return;
+      }
+      if (pwd !== conf) {
+        err.textContent = 'Les mots de passe ne correspondent pas.';
+        err.hidden = false; return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Création…';
+
+      try {
+        const user = await AUTH.register(user_, pwd);
+        document.getElementById('generated-username-display').textContent = user.username;
+        document.getElementById('register-form').hidden    = true;
+        document.getElementById('register-success').hidden = false;
+        document.getElementById('success-redirect').href   = getReturnUrl();
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Créer mon compte';
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

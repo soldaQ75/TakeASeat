@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un banc – Les Bancs</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/bench-create.css">
+  <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body>
+
+  <header class="page-header">
+    <a class="back-link" href="../index.html">← Carte</a>
+    <h1>🪑 Nouveau banc</h1>
+    <div id="header-auth-slot" style="margin-left:auto;"></div>
+  </header>
+
+  <main class="page-content">
+
+    <div class="alert alert-error" id="form-error" hidden></div>
+
+    <div class="location-info">
+      📍 <strong>Coordonnées :</strong>&nbsp;
+      <span id="location-display" style="font-family:monospace;"></span>
+    </div>
+
+    <form id="bench-form" novalidate>
+
+      <!-- ── Photos ────────────────────────────────────────────────────────── -->
+      <div class="form-section">
+        <p class="section-title">📷 Photos du banc</p>
+        <p class="section-hint">Ajoutez jusqu'à 5 photos. Glissez-déposez ou cliquez.</p>
+        <div id="photo-drop-zone">
+          <div class="drop-zone-icon">📸</div>
+          <p class="drop-zone-label">Cliquez ou déposez vos photos ici</p>
+          <input type="file" id="photo-input" accept="image/*" multiple hidden>
+        </div>
+        <div id="photo-grid"></div>
+        <p id="photo-count" class="muted">0/5 photos</p>
+      </div>
+
+      <!-- ── Notation ──────────────────────────────────────────────────────── -->
+      <div class="form-section">
+        <p class="section-title">⭐ Notation du banc</p>
+        <p class="section-hint">Évaluez chaque critère en déplaçant les curseurs.</p>
+
+        <div class="score-list">
+          <div class="score-item">
+            <div class="score-item-header">
+              <span class="score-item-label">🌳 Ambiance</span>
+              <span><span class="score-item-value" id="score-ambiance-value">0</span><span class="score-item-max">/4</span></span>
+            </div>
+            <input type="range" id="score-ambiance" min="0" max="4" step="0.5" value="0">
+            <p class="score-item-hint">Cadre, calme, végétation, vue, exposition…</p>
+          </div>
+
+          <div class="score-item">
+            <div class="score-item-header">
+              <span class="score-item-label">💺 Confort</span>
+              <span><span class="score-item-value" id="score-comfort-value">0</span><span class="score-item-max">/4</span></span>
+            </div>
+            <input type="range" id="score-comfort" min="0" max="4" step="0.5" value="0">
+            <p class="score-item-hint">Dossier, dureté, largeur, accoudoirs, stabilité…</p>
+          </div>
+
+          <div class="score-item">
+            <div class="score-item-header">
+              <span class="score-item-label">🎨 Design & ergonomie</span>
+              <span><span class="score-item-value" id="score-design-value">0</span><span class="score-item-max">/1</span></span>
+            </div>
+            <input type="range" id="score-design" min="0" max="1" step="0.5" value="0">
+            <p class="score-item-hint">User-friendly, chauffe-t-il au soleil ? Objets qui tombent à travers les lattes ?</p>
+          </div>
+
+          <div class="score-item">
+            <div class="score-item-header">
+              <span class="score-item-label">✨ Originalité</span>
+              <span><span class="score-item-value" id="score-originality-value">0</span><span class="score-item-max">/1</span></span>
+            </div>
+            <input type="range" id="score-originality" min="0" max="1" step="0.5" value="0">
+            <p class="score-item-hint">Design et emplacement insolites ou remarquables.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Total ─────────────────────────────────────────────────────────── -->
+      <div class="total-score-box">
+        <p class="total-score-label">Note totale</p>
+        <div>
+          <span id="total-score" class="total-score-value medium">0</span>
+          <span class="total-score-max"> / 10</span>
+        </div>
+      </div>
+
+      <!-- ── Commentaire & auteur ──────────────────────────────────────────── -->
+      <div class="form-section">
+        <p class="section-title">💬 Commentaire</p>
+        <p class="section-hint">Décrivez le banc et justifiez votre note.</p>
+
+        <div class="form-field">
+          <label class="form-label" for="bench-comment">Votre commentaire <span style="color:var(--red)">*</span></label>
+          <textarea class="form-textarea" id="bench-comment"
+            placeholder="Ce banc est situé face à la Seine, à l'ombre d'un grand platane…"
+            maxlength="1000" required></textarea>
+        </div>
+
+        <!-- Auteur : pseudo du compte connecté (non modifiable) -->
+        <div class="form-field">
+          <label class="form-label">Publication en tant que</label>
+          <div class="author-display">
+            <span>👤</span>
+            <span id="author-name" style="font-weight:700;"></span>
+            <span class="muted" style="font-size:.78rem;margin-left:.25rem;">(non modifiable)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Submit ─────────────────────────────────────────────────────────── -->
+      <div class="submit-row">
+        <a class="btn btn-secondary" href="../index.html">Annuler</a>
+        <button class="btn btn-primary btn-lg" type="submit">Publier le banc 🪑</button>
+      </div>
+
+    </form>
+  </main>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/bench-api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/bench-create.js"></script>
+
+</body>
+</html>
