@@ -1,61 +1,52 @@
-(function () {
+/* global AUTH, BenchAPI, CONFIG, generateId, compressImage, getUrlParam, escapeHtml,
+          formatDate, renderStarsHTML, scoreBadgeClass, updateHeaderAuth */
+
+AUTH.onReady(async function () {
   'use strict';
 
   const benchId = getUrlParam('id');
   if (!benchId) { window.location.href = '../index.html'; return; }
 
-  const bench = BenchAPI.getById(benchId);
+  const bench = await BenchAPI.getById(benchId);
   if (!bench) {
     document.getElementById('content').innerHTML =
       '<div class="alert alert-error" style="margin:2rem auto;max-width:600px;">Banc introuvable. <a href="../index.html">Retour à la carte</a></div>';
     return;
   }
 
-  // ── Header auth ────────────────────────────────────────────────────────────────
-
   updateHeaderAuth({ authPath: 'auth.html', homeUrl: '../index.html' });
 
-  // ── Bannière succès ────────────────────────────────────────────────────────────
-
-  if (getUrlParam('new') === '1') {
+  if (getUrlParam('new') === '1')
     document.getElementById('success-banner').hidden = false;
-  }
 
-  // ── Zone admin ─────────────────────────────────────────────────────────────────
+  // ── Zone admin ──────────────────────────────────────────────────────────────
 
   if (AUTH.isAdmin()) {
     document.getElementById('admin-bench-bar').hidden = false;
 
-    // ── Suppression ────────────────────────────────────────────────────────────
-    document.getElementById('btn-delete-bench').addEventListener('click', () => {
-      if (confirm(`Supprimer définitivement ce banc ?\n"${bench.comment.slice(0, 60)}…"`)) {
-        BenchAPI.delete(benchId);
-        window.location.href = '../index.html';
-      }
+    document.getElementById('btn-delete-bench').addEventListener('click', async () => {
+      if (!confirm(`Supprimer définitivement ce banc ?\n"${bench.comment.slice(0, 60)}…"`)) return;
+      await BenchAPI.delete(benchId);
+      window.location.href = '../index.html';
     });
 
-    // ── Édition ────────────────────────────────────────────────────────────────
-
     let editPhotos = [];
+    const editModal     = document.getElementById('edit-modal');
+    const editDropZone  = document.getElementById('photo-drop-zone');
+    const editFileInput = document.getElementById('photo-input');
+    const editGrid      = document.getElementById('photo-grid');
+    const editCountEl   = document.getElementById('photo-count');
+    const editErr       = document.getElementById('edit-error');
 
-    const editModal    = document.getElementById('edit-modal');
-    const editDropZone = document.getElementById('photo-drop-zone');
-    const editFileInput= document.getElementById('photo-input');
-    const editGrid     = document.getElementById('photo-grid');
-    const editCountEl  = document.getElementById('photo-count');
-    const editErr      = document.getElementById('edit-error');
-
-    function openEditModal() {
-      const b = BenchAPI.getById(benchId);
+    async function openEditModal() {
+      const b = await BenchAPI.getById(benchId);
       editPhotos = [...(b.photos || [])];
-
       ['ambiance', 'comfort', 'design', 'originality'].forEach(key => {
         const sl = document.getElementById(`score-${key}`);
         sl.value = b.scores[key];
         document.getElementById(`score-${key}-value`).textContent = b.scores[key].toFixed(1);
       });
       updateEditTotal();
-
       document.getElementById('edit-comment').value = b.comment;
       editErr.hidden = true;
       renderEditGrid();
@@ -85,16 +76,14 @@
 
     async function handleEditFiles(files) {
       const images = files.filter(f => f.type.startsWith('image/'));
-      for (const f of images.slice(0, CONFIG.MAX_PHOTOS - editPhotos.length)) {
+      for (const f of images.slice(0, CONFIG.MAX_PHOTOS - editPhotos.length))
         editPhotos.push(await compressImage(f));
-      }
       renderEditGrid();
     }
 
-    document.getElementById('btn-edit-bench').addEventListener('click', openEditModal);
+    document.getElementById('btn-edit-bench').addEventListener('click', () => openEditModal());
     document.getElementById('btn-edit-close').addEventListener('click', closeEditModal);
     document.getElementById('btn-edit-cancel').addEventListener('click', closeEditModal);
-
     editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEditModal(); });
 
     ['ambiance', 'comfort', 'design', 'originality'].forEach(key => {
@@ -122,39 +111,37 @@
       renderEditGrid();
     });
 
-    document.getElementById('btn-edit-save').addEventListener('click', () => {
+    document.getElementById('btn-edit-save').addEventListener('click', async () => {
       const comment = document.getElementById('edit-comment').value.trim();
       if (!comment) {
         editErr.textContent = 'Le commentaire ne peut pas être vide.';
         editErr.hidden = false;
         return;
       }
-      const b = BenchAPI.getById(benchId);
+      const b = await BenchAPI.getById(benchId);
       b.photos  = editPhotos;
       b.comment = comment;
       ['ambiance', 'comfort', 'design', 'originality'].forEach(key => {
         b.scores[key] = parseFloat(document.getElementById(`score-${key}`).value);
       });
-      const total = b.scores.ambiance + b.scores.comfort + b.scores.design + b.scores.originality;
-      b.scores.total = parseFloat(total.toFixed(1));
-      BenchAPI.save(b);
+      b.scores.total = parseFloat(
+        (b.scores.ambiance + b.scores.comfort + b.scores.design + b.scores.originality).toFixed(1));
+      await BenchAPI.save(b);
       location.reload();
     });
   }
 
-  // ── Galerie ────────────────────────────────────────────────────────────────────
+  // ── Galerie ─────────────────────────────────────────────────────────────────
 
   const gallery = document.getElementById('bench-gallery');
   if (bench.photos && bench.photos.length > 0) {
     let cur = 0;
-
     function updateGallery(idx) {
       cur = idx;
       document.getElementById('gallery-main-img').src = bench.photos[idx];
       gallery.querySelectorAll('.gallery-thumb').forEach((t, i) =>
         t.classList.toggle('active', i === idx));
     }
-
     gallery.innerHTML = `
       <div class="gallery-main">
         <img id="gallery-main-img" src="${bench.photos[0]}" alt="Photo principale">
@@ -172,10 +159,8 @@
         </div>
       ` : ''}
     `;
-
     gallery.querySelectorAll('.gallery-thumb').forEach(t =>
       t.addEventListener('click', () => updateGallery(parseInt(t.dataset.idx))));
-
     const prev = document.getElementById('gallery-prev');
     const next = document.getElementById('gallery-next');
     if (prev) {
@@ -186,7 +171,7 @@
     gallery.innerHTML = '<div class="no-photo-placeholder">📷 Pas de photo</div>';
   }
 
-  // ── Score ──────────────────────────────────────────────────────────────────────
+  // ── Score ───────────────────────────────────────────────────────────────────
 
   const criteria = [
     { label: 'Ambiance',    key: 'ambiance',    max: 4, hint: 'Cadre, calme, végétation, vue…' },
@@ -194,7 +179,6 @@
     { label: 'Design',      key: 'design',      max: 1, hint: 'Ergonomie, chaleur au soleil…' },
     { label: 'Originalité', key: 'originality', max: 1, hint: 'Design & emplacement insolites' },
   ];
-
   document.getElementById('score-breakdown').innerHTML = criteria.map(c => `
     <div class="score-row">
       <div class="score-row-header">
@@ -212,31 +196,31 @@
   totalEl.textContent = bench.scores.total.toFixed(1);
   totalEl.className   = 'total-score-value ' + scoreBadgeClass(bench.scores.total);
 
-  // ── Meta ───────────────────────────────────────────────────────────────────────
+  // ── Meta ────────────────────────────────────────────────────────────────────
 
-  document.getElementById('bench-author').textContent = bench.author;
-  document.getElementById('bench-date').textContent   = formatDate(bench.createdAt);
+  document.getElementById('bench-author').textContent  = bench.author;
+  document.getElementById('bench-date').textContent    = formatDate(bench.createdAt);
   document.getElementById('bench-comment').textContent = bench.comment;
   document.getElementById('bench-coords').textContent  =
     `${bench.lat.toFixed(5)}, ${bench.lng.toFixed(5)}`;
   document.getElementById('bench-map-link').href =
     `https://www.google.com/maps?q=${bench.lat},${bench.lng}`;
 
-  // ── Formulaire d'avis : affiché selon auth ─────────────────────────────────────
+  // ── Formulaire d'avis ───────────────────────────────────────────────────────
 
   const authReturnUrl = encodeURIComponent(window.location.href);
   if (AUTH.isLoggedIn()) {
     document.getElementById('review-form-card').hidden = false;
     document.getElementById('review-author-display').textContent = AUTH.getUsername();
   } else {
-    document.getElementById('connect-cta').hidden      = false;
-    document.getElementById('connect-cta-link').href   = `auth.html?return=${authReturnUrl}`;
+    document.getElementById('connect-cta').hidden    = false;
+    document.getElementById('connect-cta-link').href = `auth.html?return=${authReturnUrl}`;
   }
 
-  // ── renderReviews (global pour reviews.js) ─────────────────────────────────────
+  // ── renderReviews (utilisé aussi par reviews.js) ────────────────────────────
 
-  window.renderReviews = function () {
-    const fresh   = BenchAPI.getById(benchId);
+  window.renderReviews = async function () {
+    const fresh   = await BenchAPI.getById(benchId);
     const reviews = (fresh && fresh.reviews) || [];
     const list    = document.getElementById('reviews-list');
     const countEl = document.getElementById('reviews-count');
@@ -244,7 +228,6 @@
     const isAdmin = AUTH.isAdmin();
 
     countEl.textContent = reviews.length;
-
     if (reviews.length) {
       const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
       avgEl.innerHTML =
@@ -277,16 +260,15 @@
       </div>
     `).join('');
 
-    // Boutons suppression admin
     list.querySelectorAll('.btn-admin-delete').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         if (confirm('Supprimer cet avis ?')) {
-          BenchAPI.deleteReview(benchId, btn.dataset.reviewId);
-          renderReviews();
+          await BenchAPI.deleteReview(benchId, btn.dataset.reviewId);
+          await renderReviews();
         }
       });
     });
   };
 
-  renderReviews();
-})();
+  await renderReviews();
+});

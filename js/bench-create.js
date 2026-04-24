@@ -1,28 +1,23 @@
-(function () {
+/* global AUTH, BenchAPI, CONFIG, generateId, compressImage, scoreBadgeClass, updateHeaderAuth */
+
+AUTH.onReady(function () {
   'use strict';
 
-  // ── Auth : redirige si non connecté ──────────────────────────────────────────
-
   if (!AUTH.isLoggedIn()) {
-    const returnUrl = encodeURIComponent(window.location.href);
-    window.location.href = `auth.html?return=${returnUrl}`;
+    window.location.href = `auth.html?return=${encodeURIComponent(window.location.href)}`;
     return;
   }
 
   updateHeaderAuth({ authPath: 'auth.html', homeUrl: '../index.html' });
-
-  // ── Location ──────────────────────────────────────────────────────────────────
 
   const loc = JSON.parse(sessionStorage.getItem('pendingBenchLocation') || 'null');
   if (!loc) { window.location.href = '../index.html'; return; }
 
   document.getElementById('location-display').textContent =
     `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
-
-  // Afficher le pseudo de l'auteur (non modifiable)
   document.getElementById('author-name').textContent = AUTH.getUsername();
 
-  // ── Notation ──────────────────────────────────────────────────────────────────
+  // ── Notation ────────────────────────────────────────────────────────────────
 
   const scores = { ambiance: 0, comfort: 0, design: 0, originality: 0 };
 
@@ -30,7 +25,7 @@
     const slider  = document.getElementById(`score-${key}`);
     const display = document.getElementById(`score-${key}-value`);
     slider.addEventListener('input', () => {
-      scores[key]      = parseFloat(slider.value);
+      scores[key]        = parseFloat(slider.value);
       display.textContent = scores[key].toFixed(1);
       updateTotal();
     });
@@ -43,13 +38,13 @@
     el.className   = 'total-score-value ' + scoreBadgeClass(total);
   }
 
-  // ── Photos ────────────────────────────────────────────────────────────────────
+  // ── Photos ──────────────────────────────────────────────────────────────────
 
-  const photos   = [];
-  const dropZone = document.getElementById('photo-drop-zone');
+  const photos    = [];
+  const dropZone  = document.getElementById('photo-drop-zone');
   const fileInput = document.getElementById('photo-input');
-  const grid     = document.getElementById('photo-grid');
-  const countEl  = document.getElementById('photo-count');
+  const grid      = document.getElementById('photo-grid');
+  const countEl   = document.getElementById('photo-count');
 
   dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -87,21 +82,25 @@
     renderGrid();
   });
 
-  // ── Soumission ────────────────────────────────────────────────────────────────
+  // ── Soumission ──────────────────────────────────────────────────────────────
 
-  document.getElementById('bench-form').addEventListener('submit', (e) => {
+  document.getElementById('bench-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const comment = document.getElementById('bench-comment').value.trim();
     if (!comment) return showError('Ajoutez un commentaire décrivant le banc.');
 
+    const submitBtn = e.target.querySelector('[type="submit"]');
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Publication…';
+
     const total = scores.ambiance + scores.comfort + scores.design + scores.originality;
     const bench = {
-      id:      generateId(),
-      lat:     loc.lat,
-      lng:     loc.lng,
+      id:        generateId(),
+      lat:       loc.lat,
+      lng:       loc.lng,
       photos,
-      scores:  {
+      scores:    {
         ambiance:    scores.ambiance,
         comfort:     scores.comfort,
         design:      scores.design,
@@ -109,21 +108,27 @@
         total:       parseFloat(total.toFixed(1)),
       },
       comment,
-      author:   AUTH.getUsername(),
-      authorId: AUTH.getId(),
+      author:    AUTH.getUsername(),
+      authorId:  AUTH.getId(),
       createdAt: Date.now(),
       reviews:   [],
     };
 
-    BenchAPI.save(bench);
-    sessionStorage.removeItem('pendingBenchLocation');
-    window.location.href = `bench-detail.html?id=${bench.id}&new=1`;
+    try {
+      await BenchAPI.save(bench);
+      sessionStorage.removeItem('pendingBenchLocation');
+      window.location.href = `bench-detail.html?id=${bench.id}&new=1`;
+    } catch {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = 'Publier le banc 🪑';
+      showError('Erreur lors de la publication. Réessayez.');
+    }
   });
 
   function showError(msg) {
-    const el  = document.getElementById('form-error');
+    const el = document.getElementById('form-error');
     el.textContent = msg;
     el.hidden      = false;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-})();
+});

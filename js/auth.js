@@ -1,122 +1,123 @@
-/* global generateId, escapeHtml */
+/* global firebase, db, fbAuth, escapeHtml */
 
 const AUTH = (() => {
-  const USERS_KEY   = 'lesBancs_users_v1';
-  const SESSION_KEY = 'lesBancs_session_v1';
+  let _user    = null; // Firebase user
+  let _doc     = null; // Firestore user document
+  let _ready   = false;
+  let _waiters = [];
 
-  // ── Hachage SHA-256 (Web Crypto) ──────────────────────────────────────────
-
-  async function _hash(password) {
-    const data = new TextEncoder().encode(`lesBancs::${password}`);
-    const buf  = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(buf))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-  }
-
-  // ── Stockage ──────────────────────────────────────────────────────────────
-
-  function _getUsers() {
-    try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
-    catch { return []; }
-  }
-
-  function _saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
-
-  function _setSession(user) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({
-      id: user.id, username: user.username, role: user.role,
-    }));
-  }
-
-  // ── Init compte admin (une seule fois) ────────────────────────────────────
-
-  (async () => {
-    const users = _getUsers();
-    if (users.some(u => u.role === 'admin')) return;
-    users.push({
-      id:           'root',
-      username:     'Admin',
-      passwordHash: await _hash('admin2025'),
-      role:         'admin',
-      createdAt:    Date.now(),
-    });
-    _saveUsers(users);
-  })();
-
-  // ── API publique ──────────────────────────────────────────────────────────
+  fbAuth.onAuthStateChanged(async (firebaseUser) => {
+    if (firebaseUser) {
+      _user = firebaseUser;
+      const snap = await db.collection('users').doc(firebaseUser.uid).get();
+      _doc = snap.exists ? snap.data() : null;
+    } else {
+      _user = null;
+      _doc  = null;
+    }
+    if (!_ready) {
+      _ready = true;
+      _waiters.forEach(cb => cb());
+      _waiters = [];
+    }
+  });
 
   return {
+    // Appelle cb() dès que l'état d'auth est connu (restauration de session incluse)
+    onReady(cb) {
+      if (_ready) { cb(); return; }
+      _waiters.push(cb);
+    },
+
+    isLoggedIn()   { return !!_user; },
+    isAdmin()      { return !!(_doc && (_doc.role === 'admin' || _doc.role === 'moderator')); },
+    isSuperAdmin() { return !!(_doc && _doc.role === 'admin'); },
+    getUsername()  { return _doc ? _doc.username : null; },
+    getId()        { return _user ? _user.uid : null; },
+
     async register(username, password) {
       username = username.trim();
       if (username.length < 3 || username.length > 20)
         throw new Error('Le pseudo doit faire entre 3 et 20 caractères.');
       if (!/^[a-zA-Z0-9_\-À-ÿ]+$/.test(username))
         throw new Error('Le pseudo ne peut contenir que des lettres, chiffres, - et _.');
-      const users = _getUsers();
-      if (users.some(u => u.username.toLowerCase() === username.toLowerCase()))
-        throw new Error('Ce pseudo est déjà pris.');
-      const user = {
-        id:           generateId(),
+
+      const existing = await db.collection('users')
+        .where('username_lc', '==', username.toLowerCase()).get();
+      if (!existing.empty) throw new Error('Ce pseudo est déjà pris.');
+
+      const isFirst = (await db.collection('users').limit(1).get()).empty;
+      const email   = `${username.toLowerCase()}@lesbancs.app`;
+
+      let cred;
+      try {
+        cred = await fbAuth.createUserWithEmailAndPassword(email, password);
+      } catch (e) {
+        if (e.code === 'auth/weak-password')
+          throw new Error('Le mot de passe doit faire au moins 6 caractères.');
+        throw new Error('Erreur lors de la création du compte.');
+      }
+
+      const userDoc = {
+        id:          cred.user.uid,
         username,
-        passwordHash: await _hash(password),
-        role:         'user',
-        createdAt:    Date.now(),
+        username_lc: username.toLowerCase(),
+        role:        isFirst ? 'admin' : 'user',
+        createdAt:   Date.now(),
       };
-      users.push(user);
-      _saveUsers(users);
-      _setSession(user);
-      return user;
+      await db.collection('users').doc(cred.user.uid).set(userDoc);
+      _user = cred.user;
+      _doc  = userDoc;
+      return userDoc;
     },
 
     async login(username, password) {
-      const users = _getUsers();
-      const user  = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
-      if ((!user) || (await _hash(password) !== user.passwordHash)) throw new Error('Identitants incorrects.');
-      _setSession(user);
-      return user;
+      const email = `${username.trim().toLowerCase()}@lesbancs.app`;
+      try {
+        const cred = await fbAuth.signInWithEmailAndPassword(email, password);
+        const snap = await db.collection('users').doc(cred.user.uid).get();
+        _user = cred.user;
+        _doc  = snap.exists ? snap.data() : null;
+        return _doc;
+      } catch {
+        throw new Error('Identifiants incorrects.');
+      }
     },
 
-    logout() { localStorage.removeItem(SESSION_KEY); },
-
-    getSession() {
-      try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
-      catch { return null; }
+    async logout() {
+      await fbAuth.signOut();
+      _user = null;
+      _doc  = null;
     },
 
-    isLoggedIn()   { return !!this.getSession(); },
-    isAdmin()      { const s = this.getSession(); return !!(s && (s.role === 'admin' || s.role === 'moderator')); },
-    isSuperAdmin() { const s = this.getSession(); return !!(s && s.role === 'admin'); },
-    getUsername()  { const s = this.getSession(); return s ? s.username : null; },
-    getId()        { const s = this.getSession(); return s ? s.id : null; },
-
-    getUsers() {
-      return _getUsers().map(({ id, username, role, createdAt }) => ({ id, username, role, createdAt }));
+    async getUsers() {
+      const snap = await db.collection('users').orderBy('createdAt').get();
+      return snap.docs.map(d => {
+        const u = d.data();
+        return { id: u.id, username: u.username, role: u.role, createdAt: u.createdAt };
+      });
     },
 
-    setRole(userId, newRole) {
-      const users = _getUsers();
-      const u = users.find(u => u.id === userId);
-      if (!u || u.role === 'admin') return;
-      u.role = newRole;
-      _saveUsers(users);
+    async setRole(userId, newRole) {
+      const snap = await db.collection('users').doc(userId).get();
+      if (!snap.exists || snap.data().role === 'admin') return;
+      await db.collection('users').doc(userId).update({ role: newRole });
     },
   };
 })();
 
-// ── Mise à jour du header selon l'état d'auth ─────────────────────────────────
+// ── Header auth ───────────────────────────────────────────────────────────────
 
 function updateHeaderAuth(opts = {}) {
   const slot = document.getElementById('header-auth-slot');
   if (!slot) return;
 
-  const session = AUTH.getSession();
   const authHref = opts.authPath || 'pages/auth.html';
   const returnTo = encodeURIComponent(window.location.href);
 
-  if (session) {
-    const isSuper = session.role === 'admin';
-    const isMod   = session.role === 'moderator';
+  if (AUTH.isLoggedIn()) {
+    const isSuper    = AUTH.isSuperAdmin();
+    const isMod      = AUTH.isAdmin() && !isSuper;
     const badgeClass = isSuper ? ' user-badge-admin' : (isMod ? ' user-badge-mod' : '');
     const icon       = isSuper ? '👑' : (isMod ? '🛡️' : '👤');
     const adminHref  = authHref.replace('auth.html', 'admin.html');
@@ -126,13 +127,13 @@ function updateHeaderAuth(opts = {}) {
     slot.innerHTML = `
       <div class="user-badge${badgeClass}">
         <span>${icon}</span>
-        <span class="user-badge-name">${escapeHtml(session.username)}</span>
+        <span class="user-badge-name">${escapeHtml(AUTH.getUsername())}</span>
       </div>
       ${panelBtn}
       <button class="btn btn-secondary btn-sm" id="btn-logout">Déconnexion</button>
     `;
-    document.getElementById('btn-logout').addEventListener('click', () => {
-      AUTH.logout();
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await AUTH.logout();
       window.location.href = opts.homeUrl || 'index.html';
     });
   } else {

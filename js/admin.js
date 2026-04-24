@@ -1,4 +1,6 @@
-(function () {
+/* global AUTH, escapeHtml, formatDate, updateHeaderAuth */
+
+AUTH.onReady(async function () {
   'use strict';
 
   if (!AUTH.isSuperAdmin()) {
@@ -11,39 +13,27 @@
   const ROLE_LABEL = { admin: '👑 Super Admin', moderator: '🛡️ Modérateur', user: '👤 Utilisateur' };
   const ROLE_CLASS = { admin: 'role-badge-admin', moderator: 'role-badge-mod', user: 'role-badge-user' };
 
-  function render() {
-    const me   = AUTH.getId();
-    const users = AUTH.getUsers().sort((a, b) => {
+  async function render() {
+    const me    = AUTH.getId();
+    const users = (await AUTH.getUsers()).sort((a, b) => {
       const order = { admin: 0, moderator: 1, user: 2 };
       return (order[a.role] - order[b.role]) || a.username.localeCompare(b.username);
     });
 
     const list = document.getElementById('user-list');
-
-    if (!users.length) {
-      list.innerHTML = '<p class="muted">Aucun utilisateur.</p>';
-      return;
-    }
+    if (!users.length) { list.innerHTML = '<p class="muted">Aucun utilisateur.</p>'; return; }
 
     list.innerHTML = users.map(u => {
-      const isMe        = u.id === me;
+      const isMe         = u.id === me;
       const isSuperAdmin = u.role === 'admin';
-
-      let actionBtn = '';
+      let actionBtn      = '';
       if (!isSuperAdmin && !isMe) {
-        if (u.role === 'user') {
-          actionBtn = `<button class="btn btn-secondary btn-sm" data-id="${u.id}" data-action="promote">
-            🛡️ Promouvoir modérateur
-          </button>`;
-        } else {
-          actionBtn = `<button class="btn btn-danger btn-sm" data-id="${u.id}" data-action="revoke">
-            Révoquer
-          </button>`;
-        }
+        actionBtn = u.role === 'user'
+          ? `<button class="btn btn-secondary btn-sm" data-id="${u.id}" data-action="promote">🛡️ Promouvoir modérateur</button>`
+          : `<button class="btn btn-danger btn-sm"    data-id="${u.id}" data-action="revoke">Révoquer</button>`;
       } else if (isSuperAdmin) {
         actionBtn = `<span style="font-size:.75rem;color:var(--muted);">non modifiable</span>`;
       }
-
       return `
         <div class="user-row">
           <div class="user-row-info">
@@ -57,22 +47,21 @@
     }).join('');
 
     list.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const { id, action } = btn.dataset;
-        const u = AUTH.getUsers().find(u => u.id === id);
+        const u = (await AUTH.getUsers()).find(u => u.id === id);
         if (!u) return;
-
         if (action === 'promote') {
           if (!confirm(`Promouvoir « ${u.username} » en modérateur ?\nIl pourra supprimer des bancs et des avis.`)) return;
-          AUTH.setRole(id, 'moderator');
+          await AUTH.setRole(id, 'moderator');
         } else {
           if (!confirm(`Révoquer les droits de modérateur de « ${u.username} » ?`)) return;
-          AUTH.setRole(id, 'user');
+          await AUTH.setRole(id, 'user');
         }
-        render();
+        await render();
       });
     });
   }
 
-  render();
-})();
+  await render();
+});

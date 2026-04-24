@@ -67,9 +67,10 @@ googleLayer.imageryProvider.errorEvent.addEventListener(() => {
 const benchDataSource = new Cesium.CustomDataSource('benches');
 viewer.dataSources.add(benchDataSource);
 
-function refreshMarkers() {
+async function refreshMarkers() {
   benchDataSource.entities.removeAll();
-  BenchAPI.getAll().forEach(addBenchMarker);
+  const benches = await BenchAPI.getAll();
+  benches.forEach(addBenchMarker);
 }
 
 function addBenchMarker(bench) {
@@ -150,7 +151,7 @@ function buildClusterCanvas(count, avgScore) {
   return c;
 }
 
-refreshMarkers();
+AUTH.onReady(() => refreshMarkers());
 
 // ── Clustering ────────────────────────────────────────────────────────────────
 
