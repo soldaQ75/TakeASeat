@@ -74,6 +74,7 @@ async function refreshMarkers() {
 }
 
 function addBenchMarker(bench) {
+  if (!bench.scores) return;
   benchDataSource.entities.add({
     position: Cesium.Cartesian3.fromDegrees(bench.lng, bench.lat),
     billboard: {
@@ -84,7 +85,7 @@ function addBenchMarker(bench) {
       heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
-    properties: { benchId: bench.id },
+    properties: { benchId: bench.id, benchTotal: bench.scores.total },
   });
 }
 
@@ -169,9 +170,9 @@ benchDataSource.clustering.clusterEvent.addEventListener((entities, cluster) => 
 
   let sum = 0, n = 0;
   entities.forEach(e => {
-    if (e.properties && e.properties.benchId) {
-      const bench = BenchAPI.getById(e.properties.benchId.getValue());
-      if (bench) { sum += bench.scores.total; n++; }
+    if (e.properties && e.properties.benchTotal) {
+      sum += e.properties.benchTotal.getValue();
+      n++;
     }
   });
   const avg = n ? sum / n : 0;
