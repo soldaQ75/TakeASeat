@@ -258,7 +258,6 @@ html, body { overflow: hidden; background: #000; }
 
   .logo { font-size: .95rem; gap: .4rem; }
   .logo-icon { font-size: 1.1rem; }
-  .logo-text { display: none; }
 
   .header-actions { gap: .3rem; }
   .header-actions .btn-sm { padding: .3rem .55rem; font-size: .75rem; }
