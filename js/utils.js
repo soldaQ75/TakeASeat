@@ -20,7 +20,7 @@ function escapeHtml(str) {
 
 function renderStarsHTML(rating, max = 5) {
   return Array.from({ length: max }, (_, i) =>
-    `<span class="star ${i < Math.round(rating) ? 'filled' : ''}">â˜…</span>`
+    `<span class="star ${i < Math.round(rating) ? 'filled' : ''}">★</span>`
   ).join('');
 }
 
