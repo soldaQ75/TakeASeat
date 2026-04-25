@@ -1,4 +1,4 @@
-function generateId() {
+﻿function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
@@ -20,7 +20,7 @@ function escapeHtml(str) {
 
 function renderStarsHTML(rating, max = 5) {
   return Array.from({ length: max }, (_, i) =>
-    `<span class="star ${i < Math.round(rating) ? 'filled' : ''}">★</span>`
+    `<span class="star ${i < Math.round(rating) ? 'filled' : ''}">&#9733;</span>`
   ).join('');
 }
 
