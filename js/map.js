@@ -384,3 +384,69 @@ function flashHint(msg, isError = false) {
 document.getElementById('hint-close').addEventListener('click', () => {
   document.getElementById('map-hint').hidden = true;
 });
+
+// ── Position utilisateur ───────────────────────────────────────────────────────
+
+let userLocationEntity = null;
+
+function buildUserDotCanvas() {
+  const size = 32;
+  const c    = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx  = c.getContext('2d');
+  const r    = size / 2;
+
+  // Halo translucide
+  ctx.beginPath();
+  ctx.arc(r, r, r - 1, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(66,133,244,0.22)';
+  ctx.fill();
+
+  // Bordure blanche
+  ctx.beginPath();
+  ctx.arc(r, r, r - 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+
+  // Point bleu
+  ctx.beginPath();
+  ctx.arc(r, r, r - 10, 0, Math.PI * 2);
+  ctx.fillStyle = '#4285F4';
+  ctx.fill();
+
+  return c;
+}
+
+document.getElementById('btn-my-location').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    flashHint('⚠️ Géolocalisation non supportée par votre navigateur', true);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    ({ coords: { latitude: lat, longitude: lng } }) => {
+      const pos = Cesium.Cartesian3.fromDegrees(lng, lat);
+      if (userLocationEntity) {
+        userLocationEntity.position = new Cesium.ConstantPositionProperty(pos);
+      } else {
+        userLocationEntity = viewer.entities.add({
+          position: pos,
+          billboard: {
+            image:                    buildUserDotCanvas(),
+            width:                    32,
+            height:                   32,
+            verticalOrigin:           Cesium.VerticalOrigin.CENTER,
+            heightReference:          Cesium.HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          },
+        });
+      }
+      viewer.camera.flyTo({
+        destination:  Cesium.Cartesian3.fromDegrees(lng, lat, 1200),
+        orientation:  { heading: 0, pitch: -Cesium.Math.PI_OVER_TWO, roll: 0 },
+        duration:     2.0,
+      });
+    },
+    () => flashHint('⚠️ Localisation refusée ou indisponible', true),
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+});

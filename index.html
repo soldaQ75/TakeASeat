@@ -31,8 +31,16 @@
   <!-- ── Globe container ─────────────────────────────────────────────────── -->
   <div id="map"></div>
 
+  <!-- ── Crosshair ───────────────────────────────────────────────────────── -->
+  <div id="crosshair" aria-hidden="true">
+    <div class="ch-h"></div>
+    <div class="ch-v"></div>
+    <div class="ch-dot"></div>
+  </div>
+
   <!-- ── Floating map controls ───────────────────────────────────────────── -->
   <div class="map-controls">
+    <button class="map-ctrl-btn" id="btn-my-location" title="Ma position">◎</button>
     <button class="map-ctrl-btn" id="btn-zoom-max" title="Zoom maximum">⬇</button>
     <button class="map-ctrl-btn" id="btn-zoom-out" title="Dézoomer">−</button>
     <button class="map-ctrl-btn" id="btn-zoom-in"  title="Zoomer">+</button>

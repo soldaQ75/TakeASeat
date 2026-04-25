@@ -233,6 +233,53 @@ html, body { overflow: hidden; background: #000; }
 
 .popup-footer .btn { width: 100%; justify-content: center; }
 
+/* ── Crosshair ─────────────────────────────────────────────────────────────── */
+
+#crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  pointer-events: none;
+  width: 24px;
+  height: 24px;
+}
+
+.ch-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.7);
+  transform: translateY(-50%);
+  box-shadow: 0 0 3px rgba(0,0,0,0.8);
+}
+
+.ch-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(255,255,255,0.7);
+  transform: translateX(-50%);
+  box-shadow: 0 0 3px rgba(0,0,0,0.8);
+}
+
+.ch-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0,0,0,0.8);
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
