@@ -211,7 +211,7 @@ html, body { overflow: hidden; background: #000; }
 
 #popup-meta { font-size: .75rem; color: var(--text-2); }
 
-#popup-img img { width: 100%; height: 130px; object-fit: cover; }
+#popup-img img { width: 100%; height: 130px; object-fit: contain; background: #000; }
 
 .popup-no-img {
   width: 100%; height: 80px;
