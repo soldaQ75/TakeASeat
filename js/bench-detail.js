@@ -262,9 +262,16 @@ AUTH.onReady(async function () {
 
     list.querySelectorAll('.btn-admin-delete').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (confirm('Supprimer cet avis ?')) {
+        if (!confirm('Supprimer cet avis définitivement ?')) return;
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
           await BenchAPI.deleteReview(benchId, btn.dataset.reviewId);
           await renderReviews();
+        } catch {
+          alert('Erreur lors de la suppression. Réessayez.');
+          btn.disabled = false;
+          btn.textContent = '🗑 Supprimer';
         }
       });
     });
