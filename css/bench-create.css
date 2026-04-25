@@ -197,3 +197,18 @@ input[type="range"]::-moz-range-thumb {
   .submit-row { flex-direction: column; }
   .submit-row .btn { width: 100%; justify-content: center; }
 }
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .page-content {
+    margin: 1rem auto 3rem;
+    padding: 0 .85rem;
+  }
+
+  .form-section { padding: 1.1rem 1rem; }
+
+  .total-score-box { padding: 1.1rem; }
+
+  .location-info { font-size: .8rem; }
+}
